@@ -80,7 +80,12 @@ nav {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 36px;
+}
+.nav-utility {
+  display: flex;
+  align-items: center;
+  gap: 18px;
 }
 .nav-links a {
   font-size: 0.85rem;
@@ -532,10 +537,13 @@ footer {
   .pricing { padding: 72px 24px; }
   footer { padding: 24px; }
   .proceso-steps { grid-template-columns: 1fr 1fr; }
-  .plans { grid-template-columns: 1fr; max-width: 440px; }
+  .plans { grid-template-columns: 1fr 1fr; max-width: 720px; }
+  .plan:nth-child(3) { grid-column: 1 / -1; max-width: 350px; margin: 0 auto; width: 100%; }
 }
 @media (max-width: 600px) {
   .proceso-steps { grid-template-columns: 1fr; }
+  .plans { grid-template-columns: 1fr; max-width: 440px; }
+  .plan:nth-child(3) { max-width: none; }
   .nav-links a:not(.nav-btn) { display: none; }
   .hero-stats { gap: 24px; }
   .modal { padding: 32px 24px; border-radius: 16px; }
@@ -549,11 +557,13 @@ footer {
 <nav>
   <a class="logo" href="#">noqode</a>
   <div class="nav-links">
-    <a href="#precios">Precios</a>
-    <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema" onclick="toggleTheme()">
-      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-    </button>
+    <div class="nav-utility">
+      <a href="#precios">Precios</a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema" onclick="toggleTheme()">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+      </button>
+    </div>
     <a href="#precios" class="nav-btn">Pedir presupuesto</a>
   </div>
 </nav>
@@ -897,40 +907,65 @@ footer {
     doc.text('En cuanto lo confirmemos juntos, nos ponemos manos a la obra con tu web.', margin + 16, y + 36);
     y += 48 + 28;
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13.5);
-    doc.setTextColor(10, 10, 10);
-    doc.text('Plan ' + planNombre, margin, y);
-    if (plan.precio) {
-      doc.setFontSize(19);
-      doc.text(plan.precio, pageWidth - margin - doc.getTextWidth(plan.precio), y);
-    }
-    y += 18;
+    const padCard = 24;
+    const innerWidth = pageWidth - margin * 2 - padCard * 2;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10.5);
+    const descLines = plan.desc ? doc.splitTextToSize(plan.desc, innerWidth) : [];
+    const features = plan.features || [];
 
-    if (plan.desc) {
+    let alto = padCard;
+    alto += 14;                              // etiqueta "PLAN X"
+    alto += 38;                              // precio grande
+    if (descLines.length) alto += descLines.length * 14 + 10;
+    alto += 18;                              // separador + aire
+    alto += features.length * 17;
+    alto += padCard - 6;
+
+    salto(alto);
+    const cardTop = y;
+    doc.setDrawColor(232, 232, 232);
+    doc.setFillColor(252, 252, 252);
+    doc.roundedRect(margin, cardTop, pageWidth - margin * 2, alto, 8, 8, 'FD');
+
+    let cy = cardTop + padCard;
+    const cx = margin + padCard;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(140, 140, 140);
+    doc.text(('PLAN ' + planNombre).toUpperCase(), cx, cy);
+    cy += 30;
+
+    if (plan.precio) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(30);
+      doc.setTextColor(10, 10, 10);
+      doc.text(plan.precio, cx, cy);
+    }
+    cy += 22;
+
+    if (descLines.length) {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10.5);
       doc.setTextColor(107, 107, 107);
-      const descLines = doc.splitTextToSize(plan.desc, pageWidth - margin * 2);
-      doc.text(descLines, margin, y);
-      y += descLines.length * 13 + 12;
+      doc.text(descLines, cx, cy);
+      cy += descLines.length * 14 + 10;
     }
 
     doc.setDrawColor(232, 232, 232);
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 20;
+    doc.line(cx, cy, pageWidth - margin - padCard, cy);
+    cy += 22;
 
-    if (plan.features) {
-      doc.setFontSize(10.5);
-      plan.features.forEach(f => {
-        salto(17);
-        dibujarCheck(doc, margin + 5, y);
-        doc.setTextColor(50, 50, 50);
-        doc.text(f, margin + 18, y);
-        y += 17;
-      });
-      y += 16;
-    }
+    doc.setFontSize(10.5);
+    features.forEach(f => {
+      dibujarCheck(doc, cx + 5, cy);
+      doc.setTextColor(50, 50, 50);
+      doc.text(f, cx + 18, cy);
+      cy += 17;
+    });
+
+    y = cardTop + alto + 30;
 
     salto(30);
     doc.setFont('helvetica', 'bold');
