@@ -530,6 +530,18 @@ textarea.f-input { resize: none; height: 90px; line-height: 1.6; }
   letter-spacing: -0.02em; margin-bottom: 8px;
 }
 .success-state p { font-size: 0.875rem; color: var(--mid); line-height: 1.6; }
+#ref-box {
+  margin-top: 18px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 0.82rem;
+  color: var(--mid);
+  line-height: 1.6;
+}
+#ref-box strong { color: var(--ink); font-weight: 600; }
+#ref-box a { color: var(--ink); font-weight: 500; }
 
 /* FOOTER */
 footer {
@@ -814,6 +826,7 @@ footer {
       <h3>Solicitud recibida</h3>
       <p>Ya estamos revisando tu proyecto. Te respondo en menos de 24 horas y arrancamos con tu web.</p>
       <p>Se descargó automáticamente un PDF con el resumen de tu propuesta.</p>
+      <div id="ref-box" style="display:none"></div>
       <button class="f-submit" style="margin-top:20px" onclick="descargarPDFDeNuevo()">Descargar propuesta de nuevo</button>
     </div>
   </div>
@@ -911,8 +924,9 @@ footer {
     doc.text(intro, margin, y);
     y += intro.length * 14 + 18;
 
+    const cajaAlto = data.referencia ? 66 : 48;
     doc.setFillColor(244, 244, 244);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, 48, 6, 6, 'F');
+    doc.roundedRect(margin, y, pageWidth - margin * 2, cajaAlto, 6, 6, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11.5);
     doc.setTextColor(10, 10, 10);
@@ -921,7 +935,16 @@ footer {
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
     doc.text('En cuanto lo confirmemos juntos, nos ponemos manos a la obra con tu web.', margin + 16, y + 36);
-    y += 48 + 28;
+    if (data.referencia) {
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(10, 10, 10);
+      doc.text('Referencia: ' + data.referencia, margin + 16, y + 54);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      const linkTexto = 'Seguí el progreso en noqode.es/progreso?ref=' + data.referencia;
+      doc.text(linkTexto, margin + 16 + doc.getTextWidth('Referencia: ' + data.referencia) + 10, y + 54);
+    }
+    y += cajaAlto + 28;
 
     const padCard = 24;
     const innerWidth = pageWidth - margin * 2 - padCard * 2;
@@ -1049,11 +1072,20 @@ footer {
     if (ultimosDatosPDF) generarPDF(ultimosDatosPDF, planSeleccionado);
   }
 
+  function mostrarReferencia(referencia) {
+    const box = document.getElementById('ref-box');
+    if (!referencia) { box.style.display = 'none'; return; }
+    const link = location.origin + '/progreso?ref=' + encodeURIComponent(referencia);
+    box.innerHTML = 'Tu referencia: <strong>' + referencia + '</strong><br>Seguí el progreso de tu web en <a href="' + link + '" target="_blank">' + link + '</a>';
+    box.style.display = 'block';
+  }
+
   function abrirModal(plan, precio) {
     planSeleccionado = plan;
     document.getElementById('modal-plan-label').textContent = 'Plan ' + plan + ' — ' + precio;
     document.getElementById('modal-form-wrap').style.display = 'block';
     document.getElementById('modal-success').style.display = 'none';
+    document.getElementById('ref-box').style.display = 'none';
     document.getElementById('modalOverlay').classList.add('open');
     document.body.style.overflow = 'hidden';
   }
@@ -1104,8 +1136,23 @@ footer {
         body: JSON.stringify(data)
       });
       if (res.ok) {
+        let referencia = null;
+        try {
+          const refRes = await fetch('/api/crear-proyecto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre, empresa: data.empresa, plan: planSeleccionado })
+          });
+          if (refRes.ok) {
+            const refData = await refRes.json();
+            referencia = refData.ref;
+          }
+        } catch (e) { /* si falla, seguimos igual con el resto del flujo */ }
+
+        data.referencia = referencia;
         ultimosDatosPDF = data;
         generarPDF(data, planSeleccionado);
+        mostrarReferencia(referencia);
         document.getElementById('modal-form-wrap').style.display = 'none';
         document.getElementById('modal-success').style.display = 'block';
       } else {
