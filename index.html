@@ -27,6 +27,7 @@
   --nav-border: rgba(0,0,0,0.06);
   --grid-line: rgba(0,0,0,0.04);
   --ring: rgba(10,10,10,0.12);
+  --btn-shadow: rgba(10,10,10,0.22);
 }
 :root[data-theme="dark"] {
   --bg: #0a0a0a;
@@ -41,6 +42,7 @@
   --nav-border: rgba(255,255,255,0.08);
   --grid-line: rgba(255,255,255,0.05);
   --ring: rgba(255,255,255,0.16);
+  --btn-shadow: rgba(255,255,255,0.18);
 }
 html { scroll-behavior: smooth; }
 body {
@@ -151,6 +153,16 @@ nav {
   -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 40%, transparent 100%);
   pointer-events: none;
 }
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+:root[data-theme="dark"] .hero::after { opacity: 0.08; mix-blend-mode: screen; }
 .hero h1 {
   font-size: clamp(2.8rem, 7vw, 6.5rem);
   font-weight: 600;
@@ -189,10 +201,13 @@ nav {
   padding: 13px 28px;
   border-radius: 10px;
   text-decoration: none;
-  transition: opacity 0.15s, transform 0.15s;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
   letter-spacing: -0.01em;
 }
-.btn-primary:hover { opacity: 0.8; transform: translateY(-1px); }
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px var(--btn-shadow);
+}
 .btn-ghost {
   background: transparent;
   color: var(--mid);
