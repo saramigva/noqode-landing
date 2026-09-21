@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Progreso de tu proyecto — noqode</title>
+<script>
+  (function() {
+    const saved = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', saved || (prefersDark ? 'dark' : 'light'));
+  })();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #ffffff;
+  --ink: #0a0a0a;
+  --mid: #6b6b6b;
+  --soft: #f4f4f4;
+  --border: #e8e8e8;
+  --surface: #ffffff;
+}
+:root[data-theme="dark"] {
+  --bg: #0a0a0a;
+  --ink: #f2f2f2;
+  --mid: #9a9a9a;
+  --soft: #161616;
+  --border: #2a2a2a;
+  --surface: #1c1c1c;
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Inter', -apple-system, sans-serif;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  transition: background 0.2s, color 0.2s;
+}
+.card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 44px 36px;
+}
+.logo {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 32px;
+  display: block;
+  color: var(--ink);
+  text-decoration: none;
+}
+.ref-tag {
+  display: inline-block;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--mid);
+  letter-spacing: 0.02em;
+  margin-bottom: 16px;
+}
+h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+.sub { font-size: 0.88rem; color: var(--mid); margin-bottom: 36px; line-height: 1.5; }
+.steps { display: flex; flex-direction: column; gap: 0; }
+.step {
+  display: flex;
+  gap: 16px;
+  position: relative;
+  padding-bottom: 32px;
+}
+.step:last-child { padding-bottom: 0; }
+.step-line {
+  position: absolute;
+  left: 13px; top: 28px; bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+.step:last-child .step-line { display: none; }
+.step.done .step-line { background: var(--ink); }
+.step-dot {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem;
+  color: var(--mid);
+  z-index: 1;
+}
+.step.done .step-dot { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.step.current .step-dot { border-color: var(--ink); color: var(--ink); font-weight: 600; }
+.step-body { padding-top: 3px; }
+.step-title { font-size: 0.95rem; font-weight: 500; color: var(--mid); }
+.step.done .step-title, .step.current .step-title { color: var(--ink); font-weight: 600; }
+.step-desc { font-size: 0.8rem; color: var(--mid); margin-top: 2px; line-height: 1.5; }
+.meta { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--mid); }
+.meta strong { color: var(--ink); }
+.error-state { text-align: center; }
+.error-state p { color: var(--mid); font-size: 0.9rem; margin-top: 10px; line-height: 1.6; }
+.loading { text-align: center; color: var(--mid); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+  <a class="logo" href="/">noqode</a>
+  <div class="loading" id="loading">Buscando tu proyecto…</div>
+</div>
+
+<script>
+  const ESTADOS = [
+    { key: 'recibido', titulo: 'Solicitud recibida', desc: 'Recibimos tu solicitud y la estamos revisando.' },
+    { key: 'diseno', titulo: 'En diseño', desc: 'Estamos diseñando la propuesta visual de tu web.' },
+    { key: 'desarrollo', titulo: 'En desarrollo', desc: 'Construyendo tu web con todo el detalle acordado.' },
+    { key: 'entregado', titulo: 'Entregado', desc: 'Tu web está lista y en marcha.' }
+  ];
+
+  function render(proyecto) {
+    const idxActual = ESTADOS.findIndex(e => e.key === proyecto.estado);
+    const stepsHtml = ESTADOS.map((e, i) => {
+      const cls = i < idxActual ? 'done' : (i === idxActual ? 'current' : '');
+      const icon = i < idxActual ? '✓' : (i + 1);
+      return '<div class="step ' + cls + '">' +
+        '<div class="step-line"></div>' +
+        '<div class="step-dot">' + icon + '</div>' +
+        '<div class="step-body">' +
+          '<div class="step-title">' + e.titulo + '</div>' +
+          '<div class="step-desc">' + e.desc + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    document.getElementById('card').innerHTML =
+      '<a class="logo" href="/">noqode</a>' +
+      '<div class="ref-tag">' + proyecto.ref + '</div>' +
+      '<h1>Hola ' + (proyecto.nombre || '') + '</h1>' +
+      '<div class="sub">Plan ' + proyecto.plan + ' — así va tu proyecto.</div>' +
+      '<div class="steps">' + stepsHtml + '</div>' +
+      '<div class="meta">Última actualización: <strong>' + new Date(proyecto.actualizado).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) + '</strong></div>';
+  }
+
+  function renderError() {
+    document.getElementById('card').innerHTML =
+      '<a class="logo" href="/">noqode</a>' +
+      '<div class="error-state">' +
+        '<h1>No encontramos esa referencia</h1>' +
+        '<p>Revisa que el link esté completo, o escríbenos si crees que es un error.</p>' +
+      '</div>';
+  }
+
+  const params = new URLSearchParams(location.search);
+  const ref = (params.get('ref') || '').trim();
+
+  if (!ref) {
+    renderError();
+  } else {
+    fetch('/api/progreso?ref=' + encodeURIComponent(ref))
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(render)
+      .catch(renderError);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel — noqode</title>
+<meta name="robots" content="noindex, nofollow">
+<script>
+  (function() {
+    const saved = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', saved || (prefersDark ? 'dark' : 'light'));
+  })();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #ffffff;
+  --ink: #0a0a0a;
+  --mid: #6b6b6b;
+  --soft: #f4f4f4;
+  --border: #e8e8e8;
+  --surface: #ffffff;
+}
+:root[data-theme="dark"] {
+  --bg: #0a0a0a;
+  --ink: #f2f2f2;
+  --mid: #9a9a9a;
+  --soft: #161616;
+  --border: #2a2a2a;
+  --surface: #1c1c1c;
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 15px;
+  padding: 40px 24px;
+}
+.wrap { max-width: 900px; margin: 0 auto; }
+.logo { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.02em; text-decoration: none; color: var(--ink); }
+h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em; margin: 24px 0 28px; }
+
+/* LOGIN */
+.login-box {
+  max-width: 360px;
+  margin: 80px auto 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+}
+.login-box p { color: var(--mid); font-size: 0.85rem; margin-bottom: 20px; }
+input[type="password"] {
+  width: 100%;
+  background: var(--soft);
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 0.9rem;
+  color: var(--ink);
+  outline: none;
+  font-family: inherit;
+  margin-bottom: 12px;
+}
+input[type="password"]:focus { border-color: var(--ink); }
+button {
+  width: 100%;
+  background: var(--ink);
+  color: var(--bg);
+  border: none;
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+}
+.error-msg { color: #c0392b; font-size: 0.8rem; margin-top: 10px; display: none; }
+
+/* TABLE */
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+th { color: var(--mid); font-weight: 500; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.ref-cell { font-weight: 600; }
+select {
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+.empty, .loading { color: var(--mid); font-size: 0.9rem; padding: 40px 0; text-align: center; }
+.saved-flag { font-size: 0.72rem; color: #2e7d32; margin-left: 8px; opacity: 0; transition: opacity 0.3s; }
+.saved-flag.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <a class="logo" href="/">noqode</a>
+
+  <div class="login-box" id="loginBox">
+    <p style="margin-top:16px">Introduce la contraseña de administrador</p>
+    <input type="password" id="passInput" placeholder="Contraseña">
+    <button onclick="entrar()">Entrar</button>
+    <div class="error-msg" id="errorMsg">Contraseña incorrecta</div>
+  </div>
+
+  <div id="panel" style="display:none">
+    <h1>Proyectos</h1>
+    <div id="tableWrap"><div class="loading">Cargando…</div></div>
+  </div>
+</div>
+
+<script>
+  const ESTADOS = [
+    { key: 'recibido', label: 'Recibido' },
+    { key: 'diseno', label: 'En diseño' },
+    { key: 'desarrollo', label: 'En desarrollo' },
+    { key: 'entregado', label: 'Entregado' }
+  ];
+
+  function getPass() { return sessionStorage.getItem('adminPassword') || ''; }
+
+  async function entrar() {
+    const pass = document.getElementById('passInput').value;
+    sessionStorage.setItem('adminPassword', pass);
+    const ok = await cargarProyectos();
+    if (ok) {
+      document.getElementById('loginBox').style.display = 'none';
+      document.getElementById('panel').style.display = 'block';
+    } else {
+      document.getElementById('errorMsg').style.display = 'block';
+    }
+  }
+
+  function filaHtml(p) {
+    const opciones = ESTADOS.map(e =>
+      '<option value="' + e.key + '"' + (e.key === p.estado ? ' selected' : '') + '>' + e.label + '</option>'
+    ).join('');
+    return '<tr data-ref="' + p.ref + '">' +
+      '<td class="ref-cell">' + p.ref + '</td>' +
+      '<td>' + (p.nombre || '') + '</td>' +
+      '<td>' + (p.plan || '') + '</td>' +
+      '<td><select onchange="actualizarEstado(this, \'' + p.ref + '\')">' + opciones + '</select><span class="saved-flag">✓ Guardado</span></td>' +
+      '<td>' + new Date(p.creado).toLocaleDateString('es-ES') + '</td>' +
+    '</tr>';
+  }
+
+  async function cargarProyectos() {
+    const res = await fetch('/api/admin/proyectos', { headers: { 'x-admin-password': getPass() } });
+    if (res.status === 401) return false;
+    const data = await res.json();
+    const wrap = document.getElementById('tableWrap');
+    if (!data.proyectos.length) {
+      wrap.innerHTML = '<div class="empty">Todavía no hay proyectos.</div>';
+      return true;
+    }
+    wrap.innerHTML =
+      '<table><thead><tr><th>Referencia</th><th>Nombre</th><th>Plan</th><th>Estado</th><th>Fecha</th></tr></thead>' +
+      '<tbody>' + data.proyectos.map(filaHtml).join('') + '</tbody></table>';
+    return true;
+  }
+
+  async function actualizarEstado(select, ref) {
+    const estado = select.value;
+    const res = await fetch('/api/admin/actualizar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-password': getPass() },
+      body: JSON.stringify({ ref, estado })
+    });
+    const flag = select.nextElementSibling;
+    if (res.ok) {
+      flag.classList.add('show');
+      setTimeout(() => flag.classList.remove('show'), 1500);
+    } else {
+      alert('No se pudo guardar el cambio.');
+    }
+  }
+
+  document.getElementById('passInput').addEventListener('keydown', e => { if (e.key === 'Enter') entrar(); });
+
+  if (getPass()) entrar();
+</script>
+</body>
+</html>
