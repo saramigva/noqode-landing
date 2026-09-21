@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Noqode — Webs que venden</title>
+<script>
+  (function() {
+    const saved = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', saved || (prefersDark ? 'dark' : 'light'));
+  })();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -13,6 +20,25 @@
   --mid: #6b6b6b;
   --soft: #f4f4f4;
   --border: #e8e8e8;
+  --surface: #ffffff;
+  --accent: #0a0a0a;
+  --accent-ink: #ffffff;
+  --nav-bg: rgba(255,255,255,0.85);
+  --nav-border: rgba(0,0,0,0.06);
+  --grid-line: rgba(0,0,0,0.04);
+}
+:root[data-theme="dark"] {
+  --bg: #0a0a0a;
+  --ink: #f2f2f2;
+  --mid: #9a9a9a;
+  --soft: #161616;
+  --border: #2a2a2a;
+  --surface: #1c1c1c;
+  --accent: #f2f2f2;
+  --accent-ink: #0a0a0a;
+  --nav-bg: rgba(10,10,10,0.85);
+  --nav-border: rgba(255,255,255,0.08);
+  --grid-line: rgba(255,255,255,0.05);
 }
 html { scroll-behavior: smooth; }
 body {
@@ -23,6 +49,7 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  transition: background 0.2s, color 0.2s;
 }
 
 /* NAV */
@@ -35,10 +62,11 @@ nav {
   align-items: center;
   padding: 0 48px;
   height: 60px;
-  background: rgba(255,255,255,0.85);
+  background: var(--nav-bg);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  border-bottom: 1px solid var(--nav-border);
+  transition: background 0.2s, border-color 0.2s;
 }
 .logo {
   font-size: 1rem;
@@ -63,13 +91,25 @@ nav {
 .nav-btn {
   font-size: 0.82rem !important;
   font-weight: 500 !important;
-  color: #fff !important;
-  background: var(--ink);
+  color: var(--accent-ink) !important;
+  background: var(--accent);
   padding: 8px 18px;
   border-radius: 8px;
   transition: opacity 0.15s;
 }
-.nav-btn:hover { opacity: 0.75; color: #fff !important; }
+.nav-btn:hover { opacity: 0.75; color: var(--accent-ink) !important; }
+.theme-toggle {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--soft);
+  color: var(--ink);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.theme-toggle:hover { background: var(--border); }
 
 /* HERO */
 .hero {
@@ -88,8 +128,8 @@ nav {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 60px 60px;
   mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 40%, transparent 100%);
   -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 40%, transparent 100%);
@@ -126,8 +166,8 @@ nav {
   animation: fadeUp 0.6s 0.3s forwards;
 }
 .btn-primary {
-  background: var(--ink);
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-ink);
   font-size: 0.9rem;
   font-weight: 500;
   padding: 13px 28px;
@@ -239,9 +279,10 @@ nav {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
+  max-width: 1040px;
 }
 .plan {
-  background: var(--bg);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 36px 32px;
@@ -250,7 +291,7 @@ nav {
   transition: box-shadow 0.2s, transform 0.2s;
 }
 .plan:hover { box-shadow: 0 8px 40px rgba(0,0,0,0.08); transform: translateY(-2px); }
-.plan.featured { background: var(--ink); border-color: var(--ink); color: #fff; }
+.plan.featured { background: #0a0a0a; border-color: #0a0a0a; color: #fff; }
 .plan-header {
   display: flex;
   justify-content: space-between;
@@ -315,7 +356,7 @@ nav {
 }
 .plan-cta-outline { background: transparent; border: 1px solid var(--border); color: var(--ink); }
 .plan-cta-outline:hover { border-color: var(--ink); background: var(--soft); }
-.plan-cta-white { background: #fff; color: var(--ink); }
+.plan-cta-white { background: #fff; color: #0a0a0a; }
 .plan-cta-white:hover { opacity: 0.88; }
 
 /* MODAL OVERLAY */
@@ -334,7 +375,7 @@ nav {
 .modal-overlay.open { display: flex; }
 
 .modal {
-  background: #fff;
+  background: var(--surface);
   border-radius: 20px;
   width: 100%;
   max-width: 560px;
@@ -405,7 +446,7 @@ nav {
   -webkit-appearance: none;
 }
 .f-input::placeholder { color: #bbb; }
-.f-input:focus { border-color: var(--ink); background: #fff; }
+.f-input:focus { border-color: var(--ink); background: var(--surface); }
 textarea.f-input { resize: none; height: 90px; line-height: 1.6; }
 .f-section-title {
   font-size: 0.7rem;
@@ -419,8 +460,8 @@ textarea.f-input { resize: none; height: 90px; line-height: 1.6; }
 }
 .f-submit {
   width: 100%;
-  background: var(--ink);
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-ink);
   font-family: 'Inter', sans-serif;
   font-size: 0.9rem;
   font-weight: 500;
@@ -487,6 +528,7 @@ footer {
   <a class="logo" href="#">noqode</a>
   <div class="nav-links">
     <a href="#precios">Precios</a>
+    <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema" onclick="toggleTheme()">🌙</button>
     <a href="#precios" class="nav-btn">Pedir presupuesto</a>
   </div>
 </nav>
@@ -705,6 +747,19 @@ footer {
 </div>
 
 <script>
+  function updateThemeIcon() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.getElementById('themeToggle').textContent = isDark ? '☀️' : '🌙';
+  }
+  function toggleTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    updateThemeIcon();
+  }
+  updateThemeIcon();
+
   function abrirModal(plan, precio) {
     document.getElementById('modal-plan-label').textContent = 'Plan ' + plan + ' — ' + precio;
     document.getElementById('modal-form-wrap').style.display = 'block';
