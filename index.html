@@ -103,15 +103,24 @@ nav {
 .theme-toggle {
   width: 32px; height: 32px;
   border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--soft);
+  border: none;
+  background: transparent;
   color: var(--ink);
   display: flex; align-items: center; justify-content: center;
-  font-size: 0.9rem;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  position: relative;
+  transition: background 0.15s;
 }
-.theme-toggle:hover { background: var(--border); }
+.theme-toggle:hover { background: var(--soft); }
+.theme-toggle svg {
+  position: absolute;
+  width: 17px; height: 17px;
+  transition: opacity 0.35s ease, transform 0.5s ease;
+}
+.theme-toggle .icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
+.theme-toggle .icon-sun { opacity: 0; transform: rotate(-90deg) scale(0.6); }
+:root[data-theme="dark"] .theme-toggle .icon-moon { opacity: 0; transform: rotate(90deg) scale(0.6); }
+:root[data-theme="dark"] .theme-toggle .icon-sun { opacity: 1; transform: rotate(0deg) scale(1); }
 
 /* HERO */
 .hero {
@@ -541,7 +550,10 @@ footer {
   <a class="logo" href="#">noqode</a>
   <div class="nav-links">
     <a href="#precios">Precios</a>
-    <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema" onclick="toggleTheme()">🌙</button>
+    <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema" onclick="toggleTheme()">
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+    </button>
     <a href="#precios" class="nav-btn">Pedir presupuesto</a>
   </div>
 </nav>
@@ -774,24 +786,21 @@ footer {
     <div class="success-state" id="modal-success">
       <div class="s-icon">✅</div>
       <h3>Solicitud recibida</h3>
-      <p>Te respondo en menos de 24 horas con una propuesta para tu proyecto.</p>
+      <p>Ya estamos revisando tu proyecto. Te respondo en menos de 24 horas y arrancamos con tu web.</p>
+      <p>Se descargó automáticamente un PDF con el resumen de tu propuesta.</p>
+      <button class="f-submit" style="margin-top:20px" onclick="descargarPDFDeNuevo()">Descargar propuesta de nuevo</button>
     </div>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
-  function updateThemeIcon() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    document.getElementById('themeToggle').textContent = isDark ? '☀️' : '🌙';
-  }
   function toggleTheme() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const next = isDark ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
-    updateThemeIcon();
   }
-  updateThemeIcon();
 
   document.querySelectorAll('.plan').forEach(plan => {
     plan.addEventListener('click', () => {
@@ -800,7 +809,195 @@ footer {
     });
   });
 
+  let planSeleccionado = null;
+  let ultimosDatosPDF = null;
+
+  const PLANES = {
+    'Esencial': {
+      precio: '€179',
+      desc: 'Para quien necesita presencia online profesional, rápido y sin complicaciones.',
+      features: ['Landing page de una página', 'Diseño personalizado', 'Formulario de contacto', 'Adaptado a móvil', 'Entrega en 3 días', '5 rondas de revisiones']
+    },
+    'Pro': {
+      precio: '€297',
+      desc: 'Para negocios que quieren una web que trabaje por ellos.',
+      features: ['Landing hasta 5 secciones', 'Copy orientado a ventas', 'Integración email marketing', 'SEO básico on-page', 'Animaciones sutiles', 'Entrega en 4 días', '30 rondas de revisiones']
+    },
+    'Premium': {
+      precio: '€400',
+      desc: 'Para quien quiere un site completo, escalable y listo para crecer.',
+      features: ['Web multi-página (hasta 6 páginas)', 'Panel de edición propio (CMS)', 'SEO avanzado y velocidad optimizada', 'Integraciones con herramientas externas', 'Dominio + hosting primer año', 'Soporte 30 días post-entrega', 'Revisiones ilimitadas']
+    }
+  };
+
+  const ETIQUETAS = {
+    si: 'Sí', 'si-todo': 'Sí, tengo todo listo', 'si-logo': 'Tengo logo pero no los textos',
+    no: 'No', 'no-se': 'No lo sé', parcial: 'Tengo algunas cosas'
+  };
+  function etiqueta(valor) { return valor ? (ETIQUETAS[valor] || valor) : ''; }
+
+  function dibujarCheck(doc, cx, yBaseline) {
+    const cy = yBaseline - 3.2;
+    doc.setFillColor(244, 244, 244);
+    doc.circle(cx, cy, 5.5, 'F');
+    doc.setDrawColor(10, 10, 10);
+    doc.setLineWidth(1);
+    doc.line(cx - 2.4, cy + 0.2, cx - 0.6, cy + 2.2);
+    doc.line(cx - 0.6, cy + 2.2, cx + 2.8, cy - 2.4);
+  }
+
+  function generarPDF(data, planNombre) {
+    if (!window.jspdf) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 50;
+    const plan = PLANES[planNombre] || {};
+    let y;
+
+    function salto(alturaNecesaria) {
+      if (y + alturaNecesaria > pageHeight - 70) { doc.addPage(); y = 60; }
+    }
+
+    doc.setFillColor(10, 10, 10);
+    doc.rect(0, 0, pageWidth, 90, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.text('noqode', margin, 50);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(210, 210, 210);
+    doc.text('Resumen de tu solicitud', margin, 70);
+
+    y = 130;
+    doc.setTextColor(10, 10, 10);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(19);
+    doc.text('Hola ' + (data.nombre || '') + ',', margin, y);
+
+    y += 24;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(100, 100, 100);
+    const intro = doc.splitTextToSize('Gracias por confiar en noqode. Aquí tienes el resumen de tu solicitud y del plan que elegiste.', pageWidth - margin * 2);
+    doc.text(intro, margin, y);
+    y += intro.length * 14 + 18;
+
+    doc.setFillColor(244, 244, 244);
+    doc.roundedRect(margin, y, pageWidth - margin * 2, 48, 6, 6, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11.5);
+    doc.setTextColor(10, 10, 10);
+    doc.text('Ya estamos revisando tu proyecto.', margin + 16, y + 20);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text('En cuanto lo confirmemos juntos, nos ponemos manos a la obra con tu web.', margin + 16, y + 36);
+    y += 48 + 28;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13.5);
+    doc.setTextColor(10, 10, 10);
+    doc.text('Plan ' + planNombre, margin, y);
+    if (plan.precio) {
+      doc.setFontSize(19);
+      doc.text(plan.precio, pageWidth - margin - doc.getTextWidth(plan.precio), y);
+    }
+    y += 18;
+
+    if (plan.desc) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10.5);
+      doc.setTextColor(107, 107, 107);
+      const descLines = doc.splitTextToSize(plan.desc, pageWidth - margin * 2);
+      doc.text(descLines, margin, y);
+      y += descLines.length * 13 + 12;
+    }
+
+    doc.setDrawColor(232, 232, 232);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 20;
+
+    if (plan.features) {
+      doc.setFontSize(10.5);
+      plan.features.forEach(f => {
+        salto(17);
+        dibujarCheck(doc, margin + 5, y);
+        doc.setTextColor(50, 50, 50);
+        doc.text(f, margin + 18, y);
+        y += 17;
+      });
+      y += 16;
+    }
+
+    salto(30);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13.5);
+    doc.setTextColor(10, 10, 10);
+    doc.text('Datos de tu proyecto', margin, y);
+    y += 22;
+
+    const filas = [
+      ['Nombre', data.nombre],
+      ['Email', data.email],
+      ['Empresa / Marca', data.empresa],
+      ['Teléfono', data.telefono],
+      ['Sector / negocio', data.negocio],
+      ['Web actual', data.web_actual],
+      ['Dominio comprado', etiqueta(data.dominio)],
+      ['Hosting contratado', etiqueta(data.hosting)],
+      ['Plazo', data.plazo]
+    ];
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10.5);
+    filas.forEach(([label, valor]) => {
+      if (!valor) return;
+      const valLines = doc.splitTextToSize(String(valor), pageWidth - margin * 2 - 160);
+      salto(valLines.length * 14 + 6);
+      doc.setTextColor(107, 107, 107);
+      doc.text(label, margin, y);
+      doc.setTextColor(10, 10, 10);
+      doc.text(valLines, margin + 160, y);
+      y += valLines.length * 14 + 6;
+    });
+
+    if (data.descripcion) {
+      y += 10;
+      salto(40);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(10, 10, 10);
+      doc.text('Sobre el proyecto', margin, y);
+      y += 16;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10.5);
+      doc.setTextColor(80, 80, 80);
+      const descProyecto = doc.splitTextToSize(data.descripcion, pageWidth - margin * 2);
+      descProyecto.forEach(linea => {
+        salto(14);
+        doc.text(linea, margin, y);
+        y += 14;
+      });
+    }
+
+    doc.setDrawColor(232, 232, 232);
+    doc.line(margin, pageHeight - 55, pageWidth - margin, pageHeight - 55);
+    doc.setFontSize(9);
+    doc.setTextColor(150, 150, 150);
+    doc.text('noqode — Webs que venden', margin, pageHeight - 36);
+
+    const nombreArchivo = 'propuesta-noqode-' + (data.nombre || 'cliente').trim().toLowerCase().replace(/\s+/g, '-') + '.pdf';
+    doc.save(nombreArchivo);
+  }
+
+  function descargarPDFDeNuevo() {
+    if (ultimosDatosPDF) generarPDF(ultimosDatosPDF, planSeleccionado);
+  }
+
   function abrirModal(plan, precio) {
+    planSeleccionado = plan;
     document.getElementById('modal-plan-label').textContent = 'Plan ' + plan + ' — ' + precio;
     document.getElementById('modal-form-wrap').style.display = 'block';
     document.getElementById('modal-success').style.display = 'none';
@@ -854,6 +1051,8 @@ footer {
         body: JSON.stringify(data)
       });
       if (res.ok) {
+        ultimosDatosPDF = data;
+        generarPDF(data, planSeleccionado);
         document.getElementById('modal-form-wrap').style.display = 'none';
         document.getElementById('modal-success').style.display = 'block';
       } else {
